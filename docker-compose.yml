@@ -1,0 +1,12 @@
+# Runs this service in Docker. The database is hosted on Supabase, so there is
+# no local PostgreSQL container. Connection settings come from .env.
+services:
+  candidate-profile-service:
+    build: .
+    env_file: .env
+    environment:
+      REST_PORT: 3001
+      GRPC_PORT: 50051
+    ports:
+      - "3001:3001"
+      - "50051:50051"
