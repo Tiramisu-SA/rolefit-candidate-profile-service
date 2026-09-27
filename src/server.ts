@@ -1,4 +1,5 @@
 import { env } from './config/env';
+import { createClaimsVerifier } from './auth/supabase';
 import { checkDatabaseConnection, createDatabasePool } from './config/database';
 import { PostgresProfileRepository } from './repositories/postgres-profile.repository';
 import { PlaceholderAIModelAdapter } from './adapters/ai/ai.adapter';
@@ -13,6 +14,8 @@ import { logger } from './utils/logger';
  * REST and gRPC receive the SAME ProfileService instance.
  */
 async function main(): Promise<void> {
+  const verifyClaims = createClaimsVerifier(env.supabaseUrl, env.supabasePublishableKey);
+
   // Infrastructure
   const pool = createDatabasePool();
   // Fail fast: without its database this service can't do anything useful, so
@@ -30,6 +33,7 @@ async function main(): Promise<void> {
   const app = createApp({
     profileController: new ProfileController(profileService),
     corsOrigin: env.corsOrigin,
+    verifyClaims,
   });
   const httpServer = app.listen(env.restPort, () => {
     logger.info(`REST API listening on http://localhost:${env.restPort}`);

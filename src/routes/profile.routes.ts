@@ -1,6 +1,5 @@
 import express, { Router } from 'express';
 import type { ProfileController } from '../controllers/profile.controller';
-import { identify } from '../middleware/identity.middleware';
 import { MAX_RESUME_BYTES } from '../services/profile.service';
 import type { ChildKind } from '../types/profile.types';
 
@@ -8,11 +7,10 @@ const CHILD_KINDS: ChildKind[] = ['skills', 'experience', 'education', 'projects
 
 /**
  * Public REST routes, mounted under /api/profiles. Every route works on the
- * caller's own profile ("me"), identified by the X-User-Id header.
+ * caller's own profile ("me"), identified by the verified JWT subject.
  */
 export function createProfileRouter(controller: ProfileController): Router {
   const router = Router();
-  router.use(identify);
 
   router.post('/me', controller.createProfile);
   router.get('/me', controller.getProfile);

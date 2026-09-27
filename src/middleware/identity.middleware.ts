@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import type { ClaimsVerifier } from '../auth/supabase';
 import { UnauthenticatedError } from '../utils/errors';
 import { isUuid } from '../validation/profile.validation';
 
@@ -12,14 +13,26 @@ declare global {
   }
 }
 
-/**
- * Mock identity: trusts the `X-User-Id` header (a UUID) because real auth is
- * not wired yet. When it is, only this middleware changes: verify the JWT and
- * set `req.userId` from its subject.
- */
-export function identify(req: Request, _res: Response, next: NextFunction): void {
-  const userId = req.get('x-user-id');
-  if (!isUuid(userId)) throw new UnauthenticatedError();
-  req.userId = userId;
-  next();
+/** Verify the bearer token and derive profile ownership from its signed subject. */
+export function identify(verifyClaims: ClaimsVerifier) {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const authorization = req.get('authorization') ?? '';
+    const match = /^Bearer\s+([^\s]+)$/i.exec(authorization);
+    if (!match) {
+      next(new UnauthenticatedError());
+      return;
+    }
+
+    try {
+      const claims = await verifyClaims(match[1]);
+      if (!claims || typeof claims.sub !== 'string' || !isUuid(claims.sub)) {
+        next(new UnauthenticatedError());
+        return;
+      }
+      req.userId = claims.sub;
+      next();
+    } catch {
+      next(new UnauthenticatedError());
+    }
+  };
 }

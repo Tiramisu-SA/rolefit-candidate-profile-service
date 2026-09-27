@@ -29,13 +29,15 @@ npm run dev            # start REST + gRPC with auto-reload (tsx watch)
 
 ### Database (Supabase)
 
-The database is PostgreSQL hosted on **Supabase**. This service connects with the `pg` driver using the connection string from the Supabase dashboard (**Connect** button). It does not use `supabase-js`.
+The database is PostgreSQL hosted on **Supabase**. This service connects with the `pg` driver using the connection string from the Supabase dashboard (**Connect** button). `supabase-js` verifies Auth access tokens only; profile data is still accessed through this service's repository and PostgreSQL connection.
 
 - Use the **Session pooler** string (port 5432). It works over IPv4, including from Docker. The direct connection is IPv6-only unless you have the IPv4 add-on.
 - SSL is on by default (`DATABASE_SSL=true`). To fully verify the certificate, download Supabase's CA cert and set `DATABASE_SSL_CA_PATH`.
 - Apply the schema in `db/migrations/` in order (001, 002, 003) with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f <file>`. `003_match_er_diagram.sql` is safe to re-run and brings any earlier state to the current ER diagram.
 
 The server starts even if the database is unreachable, because `pg.Pool` connects lazily.
+
+Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from the Supabase project settings. The service uses them to verify REST bearer tokens. Do not use a service role key here.
 
 ```bash
 docker compose up --build   # run this service in Docker (reads .env)
@@ -70,7 +72,7 @@ Rules this design follows:
 
 ### REST API
 
-Every `/api/profiles` route needs an `X-User-Id: <uuid>` header (mock identity until real auth; 401 otherwise) and works on the caller's own profile. A profile's `id` is its owner's user id (there is no `user_id` column). CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`).
+Every `/api/profiles` route needs `Authorization: Bearer <access-token>`. Supabase verifies the token and the service takes the profile owner id from its signed `sub` claim; caller-supplied identity headers are ignored. A profile's `id` is its owner's user id (there is no `user_id` column). CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`) and permits the `Authorization` header.
 
 | Method | Path | Result |
 | ------ | ---- | ------ |

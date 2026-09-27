@@ -15,19 +15,25 @@ interface CallOptions {
   body?: unknown;
   raw?: Buffer;
   headers?: Record<string, string>;
-  user?: string | null;
+  subject?: string | null;
+  authorization?: string | null;
 }
 
 async function withApi(fn: (call: (method: string, path: string, opts?: CallOptions) => Promise<Response>) => Promise<void>) {
   const service = new ProfileService(new InMemoryProfileRepository(), fakeAiAdapter);
-  const app = createApp({ profileController: new ProfileController(service), corsOrigin: ORIGIN });
+  const app = createApp({
+    profileController: new ProfileController(service),
+    corsOrigin: ORIGIN,
+    verifyClaims: async (token) => token.startsWith('test:') ? { sub: token.slice(5) } : null,
+  });
   const server = app.listen(0);
   await new Promise((r) => server.once('listening', r));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const call = (method: string, path: string, opts: CallOptions = {}) => {
     const headers: Record<string, string> = { ...opts.headers };
-    const user = opts.user === undefined ? USER : opts.user;
-    if (user) headers['X-User-Id'] = user;
+    const subject = opts.subject === undefined ? USER : opts.subject;
+    const authorization = opts.authorization === undefined && subject ? `Bearer test:${subject}` : opts.authorization;
+    if (authorization) headers.Authorization = authorization;
     let body: BodyInit | undefined;
     if (opts.raw) body = new Uint8Array(opts.raw);
     else if (opts.body !== undefined) {
@@ -49,17 +55,23 @@ async function errorCode(res: Response): Promise<string> {
 
 test('GET /health returns ok', async () => {
   await withApi(async (call) => {
-    const res = await call('GET', '/health', { user: null });
+    const res = await call('GET', '/health', { subject: null });
     assert.equal(res.status, 200);
   });
 });
 
-test('profile routes need a valid X-User-Id', async () => {
+test('profile routes require a verified bearer token and ignore X-User-Id', async () => {
   await withApi(async (call) => {
-    let res = await call('GET', '/api/profiles/me', { user: null });
+    let res = await call('GET', '/api/profiles/me', { subject: null });
     assert.equal(res.status, 401);
     assert.equal(await errorCode(res), 'UNAUTHENTICATED');
-    res = await call('GET', '/api/profiles/me', { user: 'not-a-uuid' });
+    res = await call('GET', '/api/profiles/me', { authorization: 'Bearer token with spaces' });
+    assert.equal(res.status, 401);
+    res = await call('GET', '/api/profiles/me', { authorization: 'Bearer expired-token' });
+    assert.equal(res.status, 401);
+    res = await call('GET', '/api/profiles/me', { subject: 'not-a-uuid' });
+    assert.equal(res.status, 401);
+    res = await call('GET', '/api/profiles/me', { subject: null, headers: { 'X-User-Id': USER } });
     assert.equal(res.status, 401);
   });
 });
@@ -67,13 +79,13 @@ test('profile routes need a valid X-User-Id', async () => {
 test('CORS preflight is answered with 204 and the allowed origin', async () => {
   await withApi(async (call) => {
     const res = await call('OPTIONS', '/api/profiles/me', {
-      user: null,
-      headers: { Origin: ORIGIN, 'Access-Control-Request-Method': 'PATCH', 'Access-Control-Request-Headers': 'x-user-id' },
+      subject: null,
+      headers: { Origin: ORIGIN, 'Access-Control-Request-Method': 'PATCH', 'Access-Control-Request-Headers': 'authorization' },
     });
     assert.equal(res.status, 204);
     assert.equal(res.headers.get('access-control-allow-origin'), ORIGIN);
     assert.match(res.headers.get('access-control-allow-methods') ?? '', /PATCH/);
-    assert.match((res.headers.get('access-control-allow-headers') ?? '').toLowerCase(), /x-user-id/);
+    assert.match((res.headers.get('access-control-allow-headers') ?? '').toLowerCase(), /authorization/);
   });
 });
 
@@ -132,7 +144,7 @@ for (const c of CHILD_CASES) {
     await withApi(async (call) => {
       assert.equal(await errorCode(await call('GET', `/api/profiles/me/${c.kind}`)), 'PROFILE_NOT_FOUND');
       await call('POST', '/api/profiles/me', { body: { name: 'Pim' } });
-      await call('POST', '/api/profiles/me', { body: { name: 'Other' }, user: OTHER });
+      await call('POST', '/api/profiles/me', { body: { name: 'Other' }, subject: OTHER });
 
       let res = await call('POST', `/api/profiles/me/${c.kind}`, { body: c.create });
       assert.equal(res.status, 201);
@@ -144,10 +156,10 @@ for (const c of CHILD_CASES) {
       res = await call('PUT', `/api/profiles/me/${c.kind}/${id}`, { body: c.update });
       assert.equal(res.status, 200);
 
-      res = await call('PUT', `/api/profiles/me/${c.kind}/${id}`, { body: c.update, user: OTHER });
+      res = await call('PUT', `/api/profiles/me/${c.kind}/${id}`, { body: c.update, subject: OTHER });
       assert.equal(res.status, 404);
       assert.equal(await errorCode(res), c.notFound);
-      res = await call('DELETE', `/api/profiles/me/${c.kind}/${id}`, { user: OTHER });
+      res = await call('DELETE', `/api/profiles/me/${c.kind}/${id}`, { subject: OTHER });
       assert.equal(res.status, 404);
 
       assert.equal((await call('DELETE', `/api/profiles/me/${c.kind}/${id}`)).status, 204);
