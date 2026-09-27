@@ -15,6 +15,8 @@ export interface EnvConfig {
   databaseSsl: boolean;
   /** Optional path to the Supabase CA certificate, used to verify the server. */
   databaseSslCaPath: string;
+  /** Web frontend origin allowed to call the REST API from the browser (CORS). */
+  corsOrigin: string;
 }
 
 /** Every problem found while reading the environment, reported together. */
@@ -54,6 +56,7 @@ function loadEnv(): EnvConfig {
     databaseUrl: readRequired('DATABASE_URL'),
     databaseSsl: readBoolean('DATABASE_SSL', true),
     databaseSslCaPath: process.env.DATABASE_SSL_CA_PATH?.trim() ?? '',
+    corsOrigin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:3000',
   };
 
   if (config.databaseUrl && !/^postgres(ql)?:\/\//.test(config.databaseUrl)) {

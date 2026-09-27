@@ -73,10 +73,12 @@ Rules this design follows:
 | Method | Path                           | Service operation           |
 | ------ | ------------------------------ | --------------------------- |
 | GET    | `/health`                      | none (health check)         |
+| POST   | `/api/profiles`                | `createProfile()` (at registration, returns the generated id) |
 | POST   | `/api/profiles/import-resume`  | `importResume()`            |
-| POST   | `/api/profiles/confirm`        | `confirmExtractedProfile()` |
+| POST   | `/api/profiles/:candidateId/confirm` | `confirmExtractedProfile()` |
 | PUT    | `/api/profiles/:candidateId`   | `updateProfile()`           |
 | GET    | `/api/profiles/:candidateId`   | `getProfile()`              |
+| DELETE | `/api/profiles/:candidateId/skills/:skillName` | `deleteSkill()` (204 No Content) |
 
 Errors are returned as `{ "error": { "code": "...", "message": "..." } }`.
 
@@ -100,9 +102,9 @@ The proto is loaded at runtime with `@grpc/proto-loader` (`keepCase: true`, so f
 | `src/config/database.ts` | PostgreSQL pool and startup connection check | 2 |
 | `db/migrations/001_init.sql` | Database schema (run in the Supabase SQL Editor) | 3 |
 | `src/types/profile.types.ts` | Domain types and operation inputs | 4 |
-| `src/repositories/profile.repository.ts` | SQL data access (only DB access in RoleFit) | 5, 6, 7 |
+| `src/repositories/profile.repository.ts` | SQL data access (only DB access in RoleFit) | 5, 6, 6b, 7 |
 | `src/utils/errors.ts`, `src/middleware/error.middleware.ts` | Domain errors and their HTTP mapping | 8 |
-| `src/services/profile.service.ts` | Business logic shared by REST and gRPC | 9, 11, 14, 15 |
+| `src/services/profile.service.ts` | Business logic shared by REST and gRPC | 9, 11, 11b, 14, 15 |
 | `src/controllers/profile.controller.ts` | REST input validation and responses | 10 |
 | `src/adapters/ai/ai.types.ts`, `ai.adapter.ts` | AI Model Adapter contract and implementations | 12, 13, 20 |
 | `proto/candidate-profile.proto` | Internal gRPC contract | 16 |

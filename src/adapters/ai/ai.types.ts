@@ -1,3 +1,5 @@
+import type { ProfileData } from '../../types/profile.types';
+
 /**
  * Types for the AI Model Adapter.
  *
@@ -5,15 +7,18 @@
  * leak provider-specific shapes (OpenAI/Gemini/Claude response formats).
  */
 
+/** The uploaded resume file. */
 export interface ParseResumeInput {
-  resumeText: string;
+  fileName: string;
+  /** e.g. 'application/pdf' */
+  mimeType: string;
+  content: Buffer;
 }
 
 /**
- * Structured data extracted from a resume.
- * TODO 12: Define the fields you expect the AI to extract. They will usually
- * map onto (a subset of) your CandidateProfile fields.
+ * Structured data extracted from a resume: the same fields a candidate can
+ * fill in. The AI can miss or get things wrong, so an adapter must still
+ * return every field (use '' or [] when nothing was found).
+ * TODO 12: decide how an adapter should handle missing or invalid values.
  */
-export interface ParsedResume {
-  // TODO 12
-}
+export type ParsedResume = ProfileData;

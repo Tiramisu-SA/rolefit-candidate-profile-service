@@ -25,3 +25,18 @@ export class NotImplementedError extends AppError {
 
 // TODO 8: Add the domain errors your service needs (for example "profile not
 // found" and "invalid input"), each with a suitable HTTP status and code.
+
+/** The requested profile doesn't exist. Maps to HTTP 404. */
+export class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(message, 404, 'NOT_FOUND');       // HTTP status for "not found"? code e.g. 'NOT_FOUND'
+  }
+}
+
+/** The request is malformed (missing field, wrong type...). Maps to HTTP 400. */
+export class ValidationError extends AppError {
+  constructor(message: string) {
+    super(message, 400, 'VALIDATION_ERROR');
+  }
+}
+

@@ -16,8 +16,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
-  // TODO 8: Handle other error sources you care about (e.g. malformed JSON
-  // bodies, database errors) and make sure internal details are not leaked.
+    // Broken JSON in the request body (thrown by express.json()).
+  if (err instanceof SyntaxError && 'type' in err && err.type === 'entity.parse.failed') {
+    res.status(400).json({ error: { code: 'INVALID_JSON', message: 'Request body is not valid JSON' } });
+    return;
+  }
+
   logger.error('Unhandled error', err);
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
 }

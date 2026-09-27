@@ -1,7 +1,14 @@
 import fs from 'node:fs';
-import { Pool, type PoolConfig } from 'pg';
+import { Pool, types, type PoolConfig } from 'pg';
 import { env } from './env';
 import { logger } from '../utils/logger';
+
+// Return Postgres `date` columns as plain 'YYYY-MM-DD' strings. By default pg
+// turns them into JS Date objects at local midnight, which shifts the day when
+// shown in UTC (2025-09-27 in Bangkok = 2025-09-26T17:00Z).
+// 1082 is Postgres' type id for `date`. Applies to every query in this service.
+const PG_DATE_TYPE_ID = 1082;
+types.setTypeParser(PG_DATE_TYPE_ID, (value) => value);
 
 /**
  * Creates the PostgreSQL connection pool for the Supabase database.

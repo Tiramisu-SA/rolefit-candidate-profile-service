@@ -19,8 +19,10 @@ export interface AIModelAdapter {
  */
 export class PlaceholderAIModelAdapter implements AIModelAdapter {
   async parseResume(input: ParseResumeInput): Promise<ParsedResume> {
-    // TODO 13: Return a fake/deterministic ParsedResume so you can build and
-    // test importResume() without calling a real AI provider.
+    // TODO 13: Return a fake ParsedResume so you can build and test
+    // importResume() without calling a real AI provider. The frontend's
+    // extractedResumeSample (rolefit-frontend/src/lib/mock/candidates.ts)
+    // is a good template.
     //
     // TODO 20 (later): Create a separate adapter class that calls a real
     // LLM provider and validates its output before returning it.
