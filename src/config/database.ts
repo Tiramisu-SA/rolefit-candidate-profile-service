@@ -1,7 +1,11 @@
 import fs from 'node:fs';
-import { Pool, type PoolConfig } from 'pg';
+import { Pool, types, type PoolConfig } from 'pg';
 import { env } from './env';
 import { logger } from '../utils/logger';
+
+// Return DATE columns as 'YYYY-MM-DD' strings. The default parses them into a
+// JS Date at local midnight, which shifts the day in non-UTC timezones.
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 /**
  * Creates the PostgreSQL connection pool for the Supabase database.

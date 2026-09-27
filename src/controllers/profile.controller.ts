@@ -1,45 +1,96 @@
 import type { Request, Response } from 'express';
 import type { ProfileService } from '../services/profile.service';
-import type {
-  ConfirmProfileInput,
-  ImportResumeInput,
-  UpdateProfileInput,
-} from '../types/profile.types';
+import type { ChildKind } from '../types/profile.types';
+
+type ChildParams = { id: string };
 
 /**
  * REST adapter: translates HTTP <-> ProfileService calls.
  *
- * Controllers only parse/validate input, call the service and shape the HTTP
- * response. No business rules here. Errors thrown by the service propagate to
- * the error middleware (Express 5 forwards async errors automatically).
+ * Controllers only read the request and shape the HTTP response. Validation
+ * and business rules live in ProfileService. Errors propagate to the error
+ * middleware (Express 5 forwards async errors automatically).
  */
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  importResume = async (req: Request, res: Response): Promise<void> => {
-    // TODO 10: Validate req.body before trusting it.
-    const input = req.body as ImportResumeInput;
-    const profile = await this.profileService.importResume(input);
-    res.status(201).json(profile);
+  // --- profile ---
+
+  getProfile = async (req: Request, res: Response) => {
+    res.json(await this.profileService.getProfile(req.userId!));
   };
 
-  confirmProfile = async (req: Request, res: Response): Promise<void> => {
-    // TODO 10: Validate req.body before trusting it.
-    const input = req.body as ConfirmProfileInput;
-    const profile = await this.profileService.confirmExtractedProfile(input);
-    res.json(profile);
+  createProfile = async (req: Request, res: Response) => {
+    res.status(201).json(await this.profileService.createProfile(req.userId!, req.body));
   };
 
-  updateProfile = async (req: Request<{ candidateId: string }>, res: Response): Promise<void> => {
-    // TODO 10: Validate the path param and req.body.
-    const changes = req.body as UpdateProfileInput;
-    const profile = await this.profileService.updateProfile(req.params.candidateId, changes);
-    res.json(profile);
+  updateBasics = async (req: Request, res: Response) => {
+    res.json(await this.profileService.updateBasics(req.userId!, req.body));
   };
 
-  getProfile = async (req: Request<{ candidateId: string }>, res: Response): Promise<void> => {
-    // TODO 10: Validate the path param.
-    const profile = await this.profileService.getProfile(req.params.candidateId);
-    res.json(profile);
+  deleteProfile = async (req: Request, res: Response) => {
+    await this.profileService.deleteProfile(req.userId!);
+    res.status(204).end();
   };
+
+  // --- child collections ---
+
+  listChildren = (kind: ChildKind) => async (req: Request, res: Response) => {
+    res.json(await this.profileService.listChildren(req.userId!, kind));
+  };
+
+  addChild = (kind: ChildKind) => async (req: Request, res: Response) => {
+    res.status(201).json(await this.profileService.addChild(req.userId!, kind, req.body));
+  };
+
+  updateChild = (kind: ChildKind) => async (req: Request<ChildParams>, res: Response) => {
+    res.json(await this.profileService.updateChild(req.userId!, kind, req.params.id, req.body));
+  };
+
+  deleteChild = (kind: ChildKind) => async (req: Request<ChildParams>, res: Response) => {
+    await this.profileService.deleteChild(req.userId!, kind, req.params.id);
+    res.status(204).end();
+  };
+
+  // --- preferences ---
+
+  getPreferences = async (req: Request, res: Response) => {
+    res.json(await this.profileService.getPreferences(req.userId!));
+  };
+
+  savePreferences = async (req: Request, res: Response) => {
+    res.json(await this.profileService.savePreferences(req.userId!, req.body));
+  };
+
+  deletePreferences = async (req: Request, res: Response) => {
+    await this.profileService.deletePreferences(req.userId!);
+    res.status(204).end();
+  };
+
+  // --- resume import / confirm ---
+
+  /** Body is the raw file; Content-Type is its MIME type; X-File-Name is URI-encoded. */
+  importResume = async (req: Request, res: Response) => {
+    const contentType = (req.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    const content = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const result = await this.profileService.importResume(req.userId!, {
+      fileName: decodeFileName(req.get('x-file-name')),
+      contentType,
+      content,
+    });
+    res.json(result);
+  };
+
+  confirmProfile = async (req: Request, res: Response) => {
+    res.json(await this.profileService.confirmProfile(req.userId!, req.body));
+  };
+}
+
+function decodeFileName(header: string | undefined): string {
+  if (!header) return 'resume';
+  try {
+    return decodeURIComponent(header).slice(0, 255) || 'resume';
+  } catch {
+    return header.slice(0, 255);
+  }
 }

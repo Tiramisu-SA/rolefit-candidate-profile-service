@@ -1,6 +1,6 @@
 import { env } from './config/env';
 import { checkDatabaseConnection, createDatabasePool } from './config/database';
-import { PostgresProfileRepository } from './repositories/profile.repository';
+import { PostgresProfileRepository } from './repositories/postgres-profile.repository';
 import { PlaceholderAIModelAdapter } from './adapters/ai/ai.adapter';
 import { ProfileService } from './services/profile.service';
 import { ProfileController } from './controllers/profile.controller';
@@ -27,7 +27,10 @@ async function main(): Promise<void> {
   const profileService = new ProfileService(profileRepository, aiModelAdapter);
 
   // REST API (public, for the web frontend)
-  const app = createApp({ profileController: new ProfileController(profileService) });
+  const app = createApp({
+    profileController: new ProfileController(profileService),
+    corsOrigin: env.corsOrigin,
+  });
   const httpServer = app.listen(env.restPort, () => {
     logger.info(`REST API listening on http://localhost:${env.restPort}`);
   });
