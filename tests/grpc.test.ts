@@ -49,7 +49,8 @@ test('GetProfile maps the profile to the proto message', async () => {
     });
     const { profile } = await getProfile(p.id);
     assert.equal(profile.candidate_id, p.id);
-    assert.equal(profile.user_id, USER);
+    assert.equal(profile.candidate_id, USER);
+    assert.equal('user_id' in profile, false);
     assert.equal(profile.name, 'Pim');
     assert.equal(profile.total_experience_months, 12);
     assert.equal(profile.verified, true);

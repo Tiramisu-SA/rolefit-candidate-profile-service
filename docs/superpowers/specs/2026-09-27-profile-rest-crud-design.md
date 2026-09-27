@@ -20,7 +20,7 @@ The target is the ER diagram. Postgres on Supabase; this service is the only cli
 
 | Table | Columns (NOT NULL in **bold**) |
 |---|---|
-| `candidate_profile` | **id** uuid PK, **user_id** uuid UNIQUE, **name** varchar, headline varchar, summary text, total_experience_months int4, email varchar, location varchar, **links** text[] default `{}`, **verified** bool default false, **created_at**, **updated_at** timestamptz |
+| `candidate_profile` | **id** uuid PK (the owner's user id; there is no separate `user_id` column), **name** varchar, headline varchar, summary text, total_experience_months int4, email varchar, location varchar, **links** text[] default `{}`, **verified** bool default false, **created_at**, **updated_at** timestamptz |
 | `candidate_skill` | **id**, **candidate_id** FK, **skill_name** varchar, proficiency_level varchar. Unique index on `(candidate_id, lower(skill_name))` |
 | `work_experience` | **id**, **candidate_id** FK, **company_name**, **job_title** varchar, start_date date, end_date date, **is_current** bool, **bullets** text[] default `{}` |
 | `education` | **id**, **candidate_id** FK (not unique), **institution_name**, **degree** varchar, field_of_study varchar, gpa numeric, year varchar |
@@ -75,7 +75,7 @@ Auth is mocked for now, so each request identifies itself:
 
 - Every `/api/profiles/*` request must send `X-User-Id: <uuid>`. `src/middleware/identity.middleware.ts` puts it on `req.userId`. If the header is missing or isn't a UUID, the request gets **401 `UNAUTHENTICATED`**.
 - The header is trusted only because auth is mocked. When real auth arrives, this middleware becomes JWT verification that sets the same `req.userId`, and nothing else changes.
-- Every route works on the caller's own profile (`/me`), looked up by `user_id`. A client can't name another user's profile.
+- Every route works on the caller's own profile (`/me`). A profile's `id` is its owner's user id, so the lookup is `WHERE id = <caller's user id>`. A client can't name another user's profile.
 
 ## CORS
 
@@ -178,7 +178,7 @@ interface ProfileDocumentInput extends ProfileBasicsInput {
 
 // Responses: each Input plus `id`, all optional fields present as value or null, arrays always present.
 interface Profile {
-  id: string; userId: string; name: string; headline: string | null; summary: string | null;
+  id: string; /* = the owner's user id */ name: string; headline: string | null; summary: string | null;
   email: string | null; location: string | null; links: string[]; verified: boolean;
   totalExperienceMonths: number;
   skills: Skill[]; experience: Experience[]; education: Education[]; projects: Project[];
@@ -261,8 +261,7 @@ This follows the existing layers; the scaffold's TODO numbers are resolved in pl
 ```proto
 message CandidateProfile {
   string candidate_id = 1;
-  reserved 2; reserved "status";
-  string user_id = 3;
+  reserved 2, 3; reserved "status", "user_id";   // the profile id is the user id
   string name = 4;
   string headline = 5;
   string location = 6;

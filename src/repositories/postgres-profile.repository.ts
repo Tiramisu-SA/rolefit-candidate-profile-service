@@ -48,7 +48,7 @@ const CHILD_TABLES: Record<ChildKind, { table: string; columns: Record<string, s
 const BASIC_COLUMNS = ['name', 'headline', 'summary', 'email', 'location', 'links'] as const;
 
 const PROFILE_SELECT = `
-  SELECT id, user_id AS "userId", name, headline, summary, email, location, links, verified,
+  SELECT id, name, headline, summary, email, location, links, verified,
          coalesce(total_experience_months, 0) AS "totalExperienceMonths",
          created_at AS "createdAt", updated_at AS "updatedAt"
   FROM candidate_profile`;
@@ -108,24 +108,18 @@ export class PostgresProfileRepository implements ProfileRepository {
     }
   }
 
-  async findByUserId(userId: string): Promise<CandidateProfile | null> {
-    const { rows } = await this.db.query(`${PROFILE_SELECT} WHERE user_id = $1`, [userId]);
-    return rows[0] ? this.assemble(rows[0]) : null;
-  }
-
   async findById(id: string): Promise<CandidateProfile | null> {
     const { rows } = await this.db.query(`${PROFILE_SELECT} WHERE id = $1`, [id]);
     return rows[0] ? this.assemble(rows[0]) : null;
   }
 
-  async create(userId: string, basics: ProfileBasics): Promise<string> {
+  async create(id: string, basics: ProfileBasics): Promise<void> {
     try {
-      const { rows } = await this.db.query<{ id: string }>(
-        `INSERT INTO candidate_profile (user_id, name, headline, summary, email, location, links)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-        [userId, basics.name, basics.headline, basics.summary, basics.email, basics.location, basics.links],
+      await this.db.query(
+        `INSERT INTO candidate_profile (id, name, headline, summary, email, location, links)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [id, basics.name, basics.headline, basics.summary, basics.email, basics.location, basics.links],
       );
-      return rows[0].id;
     } catch (err) {
       if (isUniqueViolation(err)) throw new ConflictError('PROFILE_ALREADY_EXISTS', 'You already have a profile');
       throw err;
@@ -248,21 +242,19 @@ export class PostgresProfileRepository implements ProfileRepository {
     return (rowCount ?? 0) > 0;
   }
 
-  async replaceDocument(userId: string, doc: ProfileDocument, experienceMonths: number): Promise<string> {
-    return this.transaction(async (tx) => {
+  async replaceDocument(profileId: string, doc: ProfileDocument, experienceMonths: number): Promise<void> {
+    await this.transaction(async (tx) => {
       const repo = tx as PostgresProfileRepository;
-      const { rows } = await repo.db.query<{ id: string }>(
+      await repo.db.query(
         `INSERT INTO candidate_profile
-           (user_id, name, headline, summary, email, location, links, verified, total_experience_months)
+           (id, name, headline, summary, email, location, links, verified, total_experience_months)
          VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8)
-         ON CONFLICT (user_id) DO UPDATE SET
+         ON CONFLICT (id) DO UPDATE SET
            name = EXCLUDED.name, headline = EXCLUDED.headline, summary = EXCLUDED.summary,
            email = EXCLUDED.email, location = EXCLUDED.location, links = EXCLUDED.links,
-           verified = true, total_experience_months = EXCLUDED.total_experience_months, updated_at = now()
-         RETURNING id`,
-        [userId, doc.name, doc.headline, doc.summary, doc.email, doc.location, doc.links, experienceMonths],
+           verified = true, total_experience_months = EXCLUDED.total_experience_months, updated_at = now()`,
+        [profileId, doc.name, doc.headline, doc.summary, doc.email, doc.location, doc.links, experienceMonths],
       );
-      const profileId = rows[0].id;
 
       for (const { table } of Object.values(CHILD_TABLES)) {
         await repo.db.query(`DELETE FROM ${table} WHERE candidate_id = $1`, [profileId]);
@@ -274,7 +266,6 @@ export class PostgresProfileRepository implements ProfileRepository {
       for (const edu of doc.education) await repo.insertChild('education', profileId, edu);
       for (const project of doc.projects) await repo.insertChild('projects', profileId, project);
       if (doc.preferences) await repo.upsertPreferences(profileId, doc.preferences);
-      return profileId;
     });
   }
 

@@ -70,7 +70,7 @@ Rules this design follows:
 
 ### REST API
 
-Every `/api/profiles` route needs an `X-User-Id: <uuid>` header (mock identity until real auth; 401 otherwise) and works on the caller's own profile. CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`).
+Every `/api/profiles` route needs an `X-User-Id: <uuid>` header (mock identity until real auth; 401 otherwise) and works on the caller's own profile. A profile's `id` is its owner's user id (there is no `user_id` column). CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`).
 
 | Method | Path | Result |
 | ------ | ---- | ------ |

@@ -16,6 +16,8 @@ import type {
  * candidate profile database. The service layer depends on this interface,
  * which also lets tests swap in an in-memory fake.
  *
+ * A profile's id is its owner's user id (candidate_profile has no separate
+ * user_id column), so "the caller's profile" is simply findById(userId).
  * Child methods always take the owning profile id, so a row can only be
  * read or changed through its own profile.
  */
@@ -23,10 +25,9 @@ export interface ProfileRepository {
   /** Runs fn inside one transaction; fn gets a repository bound to it. */
   transaction<T>(fn: (repo: ProfileRepository) => Promise<T>): Promise<T>;
 
-  findByUserId(userId: string): Promise<CandidateProfile | null>;
   findById(id: string): Promise<CandidateProfile | null>;
-  /** Returns the new profile id. */
-  create(userId: string, basics: ProfileBasics): Promise<string>;
+  /** Creates the profile with the given id (the user's id). Throws ConflictError('PROFILE_ALREADY_EXISTS') if it exists. */
+  create(id: string, basics: ProfileBasics): Promise<void>;
   updateBasics(profileId: string, changes: Partial<ProfileBasics>): Promise<void>;
   deleteById(profileId: string): Promise<void>;
   /** Sets updated_at = now() on the profile row. */
@@ -45,8 +46,8 @@ export interface ProfileRepository {
   deletePreferences(profileId: string): Promise<boolean>;
 
   /**
-   * Creates or fully replaces the user's profile (basics and every child row),
-   * sets verified = true and the given experience months. Returns the profile id.
+   * Creates or fully replaces the profile with this id (basics and every child
+   * row), and sets verified = true and the given experience months.
    */
-  replaceDocument(userId: string, doc: ProfileDocument, experienceMonths: number): Promise<string>;
+  replaceDocument(id: string, doc: ProfileDocument, experienceMonths: number): Promise<void>;
 }

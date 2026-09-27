@@ -52,7 +52,9 @@ test('createProfile creates an unverified profile; a second create is a conflict
   const { service } = makeService();
   const p = await service.createProfile(USER, { name: 'Pim' });
   assert.equal(p.name, 'Pim');
-  assert.equal(p.userId, USER);
+  // The profile id is the user's id (no separate user_id column).
+  assert.equal(p.id, USER);
+  assert.equal('userId' in p, false);
   assert.equal(p.verified, false);
   await rejectsWithCode(service.createProfile(USER, { name: 'Pim' }), 'PROFILE_ALREADY_EXISTS');
 });
@@ -180,6 +182,7 @@ test('confirmProfile creates a verified profile, and a second confirm replaces c
     preferences: { employmentTypes: ['FULL_TIME'] },
   };
   const first = await service.confirmProfile(USER, doc);
+  assert.equal(first.id, USER);
   assert.equal(first.verified, true);
   assert.equal(first.totalExperienceMonths, 12);
   assert.equal(first.skills.length, 2);
@@ -196,7 +199,8 @@ test('getProfileById rejects a non-UUID id and throws not found for an unknown o
   await assert.rejects(service.getProfileById('abc'), ValidationError);
   await rejectsWithCode(service.getProfileById('33333333-3333-4333-8333-333333333333'), 'PROFILE_NOT_FOUND');
   const p = await service.createProfile(USER, { name: 'Pim' });
-  assert.equal((await service.getProfileById(p.id)).userId, USER);
+  assert.equal(p.id, USER);
+  assert.equal((await service.getProfileById(USER)).name, 'Pim');
 });
 
 test('totalExperienceMonths for a current role keeps growing without new writes', async () => {

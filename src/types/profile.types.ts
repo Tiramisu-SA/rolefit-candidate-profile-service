@@ -90,8 +90,8 @@ export type ChildKind = keyof ChildDataMap;
 export type ChildRow<K extends ChildKind> = ChildDataMap[K] & { id: string };
 
 export interface CandidateProfile extends ProfileBasics {
+  /** Also the owner's user id: a user has one profile, stored under their own id. */
   id: string;
-  userId: string;
   verified: boolean;
   totalExperienceMonths: number;
   skills: Skill[];

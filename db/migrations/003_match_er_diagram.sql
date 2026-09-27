@@ -4,6 +4,7 @@
 -- already matches the diagram. Existing data is carried over where a column
 -- is replaced (first/last name -> name, province/country -> location,
 -- description -> bullets, degree_level -> degree, graduation_date -> year).
+-- candidate_profile.id is the owner's user id, so there is no user_id column.
 --
 -- Check what is live first (read-only), in the Supabase SQL Editor:
 --
@@ -48,33 +49,10 @@ BEGIN
   END IF;
 END $$;
 
--- user_id links a profile to its account; every lookup uses it. Tables built by
--- hand in the dashboard may lack it. Rows that exist before it is added keep a
--- NULL user_id (no user can reach them), so NOT NULL is only set when no such
--- row is left: give them a user_id or delete them, then re-run this file.
-DO $$
-BEGIN
-  IF NOT pg_temp.has_column('candidate_profile', 'user_id') THEN
-    ALTER TABLE candidate_profile ADD COLUMN user_id uuid;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint c
-    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
-    WHERE c.conrelid = 'candidate_profile'::regclass AND c.contype = 'u'
-      AND a.attname = 'user_id' AND array_length(c.conkey, 1) = 1
-  ) THEN
-    ALTER TABLE candidate_profile ADD CONSTRAINT candidate_profile_user_id_key UNIQUE (user_id);
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM candidate_profile WHERE user_id IS NULL) THEN
-    ALTER TABLE candidate_profile ALTER COLUMN user_id SET NOT NULL;
-  ELSE
-    RAISE NOTICE 'candidate_profile has rows without user_id; user_id stays nullable until they are fixed';
-  END IF;
-END $$;
-
+-- The diagram has no user_id: a profile's id IS its owner's user id. 001 had a
+-- separate user_id column; it is dropped here (002 notes the tables were empty).
 ALTER TABLE candidate_profile
+  DROP COLUMN IF EXISTS user_id,
   DROP COLUMN IF EXISTS first_name,
   DROP COLUMN IF EXISTS last_name,
   DROP COLUMN IF EXISTS province,

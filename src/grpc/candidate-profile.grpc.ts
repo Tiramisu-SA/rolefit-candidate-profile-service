@@ -21,7 +21,6 @@ export interface GetProfileRequest {
 
 export interface CandidateProfileMessage {
   candidate_id: string;
-  user_id: string;
   name: string;
   headline: string;
   location: string;
@@ -57,7 +56,6 @@ export interface GetProfileResponse {
 export function toProtoProfile(p: CandidateProfile): CandidateProfileMessage {
   return {
     candidate_id: p.id,
-    user_id: p.userId,
     name: p.name,
     headline: p.headline ?? '',
     location: p.location ?? '',

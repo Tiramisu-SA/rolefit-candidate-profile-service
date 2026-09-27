@@ -67,7 +67,8 @@ export interface ResumeFile {
  * must not import Express, gRPC or pg.
  *
  * Every public method except getProfileById works on the caller's own
- * profile, identified by userId (from the identity middleware).
+ * profile. A profile's id is its owner's user id (from the identity
+ * middleware), so no separate user_id lookup is needed.
  */
 export class ProfileService {
   constructor(
@@ -79,7 +80,7 @@ export class ProfileService {
   // --- profile ---------------------------------------------------------------
 
   async getProfile(userId: string): Promise<CandidateProfile> {
-    const profile = await this.repo.findByUserId(userId);
+    const profile = await this.repo.findById(userId);
     if (!profile) throw profileNotFound();
     return this.withCurrentMonths(profile);
   }
@@ -103,7 +104,7 @@ export class ProfileService {
 
   async createProfile(userId: string, body: unknown): Promise<CandidateProfile> {
     const basics = validateBasics(body);
-    if (await this.repo.findByUserId(userId)) {
+    if (await this.repo.findById(userId)) {
       throw new ConflictError('PROFILE_ALREADY_EXISTS', 'You already have a profile');
     }
     await this.repo.create(userId, basics);

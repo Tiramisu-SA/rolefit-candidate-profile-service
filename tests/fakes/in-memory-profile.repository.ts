@@ -14,7 +14,6 @@ import { ConflictError } from '../../src/utils/errors';
 
 interface Row extends ProfileBasics {
   id: string;
-  userId: string;
   verified: boolean;
   totalExperienceMonths: number;
   createdAt: Date;
@@ -43,21 +42,15 @@ export class InMemoryProfileRepository implements ProfileRepository {
     return fn(this);
   }
 
-  async findByUserId(userId: string) {
-    const row = this.profiles.find((p) => p.userId === userId);
-    return row ? this.assemble(row) : null;
-  }
-
   async findById(id: string) {
     const row = this.profiles.find((p) => p.id === id);
     return row ? this.assemble(row) : null;
   }
 
-  async create(userId: string, basics: ProfileBasics) {
+  async create(id: string, basics: ProfileBasics) {
+    if (this.profiles.some((p) => p.id === id)) throw new ConflictError('PROFILE_ALREADY_EXISTS', 'You already have a profile');
     const at = this.now();
-    const row: Row = { ...basics, id: randomUUID(), userId, verified: false, totalExperienceMonths: 0, createdAt: at, updatedAt: at };
-    this.profiles.push(row);
-    return row.id;
+    this.profiles.push({ ...basics, id, verified: false, totalExperienceMonths: 0, createdAt: at, updatedAt: at });
   }
 
   async updateBasics(profileId: string, changes: Partial<ProfileBasics>) {
@@ -124,15 +117,14 @@ export class InMemoryProfileRepository implements ProfileRepository {
     return this.preferences.delete(profileId);
   }
 
-  async replaceDocument(userId: string, doc: ProfileDocument, experienceMonths: number) {
+  async replaceDocument(id: string, doc: ProfileDocument, experienceMonths: number) {
     const { skills, experience, education, projects, preferences, ...basics } = doc;
-    let row = this.profiles.find((p) => p.userId === userId);
+    let row = this.profiles.find((p) => p.id === id);
     if (!row) {
-      await this.create(userId, basics);
-      row = this.profiles.find((p) => p.userId === userId)!;
+      await this.create(id, basics);
+      row = this.profiles.find((p) => p.id === id)!;
     }
     Object.assign(row, basics, { verified: true, totalExperienceMonths: experienceMonths, updatedAt: this.now() });
-    const id = row.id;
     for (const kind of Object.keys(this.children) as ChildKind[]) {
       (this.children[kind] as { profileId: string }[]) = this.children[kind].filter((c) => c.profileId !== id);
     }
@@ -142,7 +134,6 @@ export class InMemoryProfileRepository implements ProfileRepository {
     for (const p of projects) await this.insertChild('projects', id, p);
     if (preferences) this.preferences.set(id, { ...preferences });
     else this.preferences.delete(id);
-    return id;
   }
 
   private assertUniqueSkill(profileId: string, name: string, exceptId: string | null) {

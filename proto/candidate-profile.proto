@@ -14,7 +14,7 @@ service CandidateProfileService {
 }
 
 message GetProfileRequest {
-  // candidate_profile.id (UUID)
+  // candidate_profile.id (UUID), which is also the owner's user id
   string candidate_id = 1;
 }
 
@@ -24,9 +24,8 @@ message GetProfileResponse {
 
 message CandidateProfile {
   string candidate_id = 1;
-  reserved 2;
-  reserved "status";
-  string user_id = 3;
+  reserved 2, 3;
+  reserved "status", "user_id";  // the profile id is the user id
   string name = 4;
   string headline = 5;
   string location = 6;
