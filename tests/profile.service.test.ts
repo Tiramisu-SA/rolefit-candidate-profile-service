@@ -198,3 +198,18 @@ test('getProfileById rejects a non-UUID id and throws not found for an unknown o
   const p = await service.createProfile(USER, { name: 'Pim' });
   assert.equal((await service.getProfileById(p.id)).userId, USER);
 });
+
+test('totalExperienceMonths for a current role keeps growing without new writes', async () => {
+  const repo = new InMemoryProfileRepository();
+  let now = new Date('2026-09-27T12:00:00Z');
+  const service = new ProfileService(repo, fakeAiAdapter, () => now);
+  await service.confirmProfile(USER, {
+    name: 'Pim', skills: [], education: [], projects: [], preferences: null,
+    experience: [{ companyName: 'A', jobTitle: 'Dev', startDate: '2026-03-27', isCurrent: true }],
+  });
+  assert.equal((await service.getProfile(USER)).totalExperienceMonths, 6);
+  now = new Date('2026-12-27T12:00:00Z');
+  const later = await service.getProfile(USER);
+  assert.equal(later.totalExperienceMonths, 9);
+  assert.equal((await service.getProfileById(later.id)).totalExperienceMonths, 9);
+});

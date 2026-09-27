@@ -81,7 +81,7 @@ export class ProfileService {
   async getProfile(userId: string): Promise<CandidateProfile> {
     const profile = await this.repo.findByUserId(userId);
     if (!profile) throw profileNotFound();
-    return profile;
+    return this.withCurrentMonths(profile);
   }
 
   /** Used by gRPC (other services know the profile id, not the user id). */
@@ -89,7 +89,16 @@ export class ProfileService {
     if (!isUuid(id)) throw new ValidationError([{ field: 'candidate_id', message: 'Must be a UUID' }]);
     const profile = await this.repo.findById(id);
     if (!profile) throw profileNotFound();
-    return profile;
+    return this.withCurrentMonths(profile);
+  }
+
+  /**
+   * The stored total is refreshed on every experience write, but a current role
+   * keeps adding months with no write, so the returned value is recalculated
+   * from the rows already loaded.
+   */
+  private withCurrentMonths(profile: CandidateProfile): CandidateProfile {
+    return { ...profile, totalExperienceMonths: computeExperienceMonths(profile.experience, this.todayIso()) };
   }
 
   async createProfile(userId: string, body: unknown): Promise<CandidateProfile> {
