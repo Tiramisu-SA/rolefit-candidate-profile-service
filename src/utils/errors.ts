@@ -16,12 +16,70 @@ export class AppError extends Error {
   }
 }
 
-/** Thrown by every placeholder in the scaffold. Maps to HTTP 501 / gRPC UNIMPLEMENTED. */
+export interface FieldError {
+  /** Path of the invalid field, e.g. `experience[2].endDate`. */
+  field: string;
+  message: string;
+}
+
+export class ValidationError extends AppError {
+  constructor(
+    public readonly details: FieldError[],
+    message = 'Some fields are invalid',
+  ) {
+    super(message, 400, 'VALIDATION_ERROR');
+  }
+}
+
+export class MalformedJsonError extends AppError {
+  constructor() {
+    super('The request body is not valid JSON', 400, 'MALFORMED_JSON');
+  }
+}
+
+export class EmptyFileError extends AppError {
+  constructor() {
+    super('The uploaded file is empty', 400, 'EMPTY_FILE');
+  }
+}
+
+export class UnauthenticatedError extends AppError {
+  constructor(message = 'Missing or invalid X-User-Id header') {
+    super(message, 401, 'UNAUTHENTICATED');
+  }
+}
+
+/** 404 with a resource-specific code such as PROFILE_NOT_FOUND. */
+export class NotFoundError extends AppError {
+  constructor(code: string, message: string) {
+    super(message, 404, code);
+  }
+}
+
+/** 409 with a specific code such as DUPLICATE_SKILL. */
+export class ConflictError extends AppError {
+  constructor(code: string, message: string) {
+    super(message, 409, code);
+  }
+}
+
+export class FileTooLargeError extends AppError {
+  constructor() {
+    super('The file is larger than 5 MB', 413, 'FILE_TOO_LARGE');
+  }
+}
+
+export class UnsupportedFileTypeError extends AppError {
+  constructor() {
+    super('Upload a PDF or Word document (.pdf, .doc, .docx)', 415, 'UNSUPPORTED_FILE_TYPE');
+  }
+}
+
+/** Thrown by scaffold placeholders. Maps to HTTP 501 / gRPC UNIMPLEMENTED. */
 export class NotImplementedError extends AppError {
   constructor(what: string) {
     super(`${what} is not implemented yet`, 501, 'NOT_IMPLEMENTED');
   }
 }
 
-// TODO 8: Add the domain errors your service needs (for example "profile not
-// found" and "invalid input"), each with a suitable HTTP status and code.
+export const profileNotFound =() => new NotFoundError('PROFILE_NOT_FOUND', 'Profile not found');
