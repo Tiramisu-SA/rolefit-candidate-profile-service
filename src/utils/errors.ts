@@ -75,11 +75,4 @@ export class UnsupportedFileTypeError extends AppError {
   }
 }
 
-/** Thrown by scaffold placeholders. Maps to HTTP 501 / gRPC UNIMPLEMENTED. */
-export class NotImplementedError extends AppError {
-  constructor(what: string) {
-    super(`${what} is not implemented yet`, 501, 'NOT_IMPLEMENTED');
-  }
-}
-
-export const profileNotFound =() => new NotFoundError('PROFILE_NOT_FOUND', 'Profile not found');
+export const profileNotFound = () => new NotFoundError('PROFILE_NOT_FOUND', 'Profile not found');

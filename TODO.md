@@ -50,7 +50,7 @@ Run the file with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f db/mig
 
 **Done when:** the table shows up in the Supabase Table Editor, and you can explain each design choice.
 
-### TODO 4: Model profile types in TypeScript
+### TODO 4: Model profile types in TypeScript ✅ Done
 **Files:** `src/types/profile.types.ts`
 
 - Add the fields from TODO 3 to `CandidateProfile` (use camelCase in TS and snake_case in SQL; the repository maps between them).
@@ -63,7 +63,7 @@ Run the file with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f db/mig
 
 ## Phase 2: Data access
 
-### TODO 5: `ProfileRepository.findByCandidateId()`
+### TODO 5: `ProfileRepository.findByCandidateId()` ✅ Done
 **Files:** `src/repositories/profile.repository.ts`
 
 - `candidateId` in the API means `candidate_profile.id` (the primary key that the other tables reference with `candidate_id`), not `user_id`.
@@ -74,12 +74,12 @@ Run the file with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f db/mig
 
 **Done when:** you can call it from a temporary script or a test and get a profile or `null`.
 
-### TODO 6: `ProfileRepository.saveDraft()`
+### TODO 6: `ProfileRepository.saveDraft()` ✅ Done
 **Files:** `src/repositories/profile.repository.ts`
 
 Store AI-extracted data as a `draft` profile. Decide what should happen when a draft (or a confirmed profile) already exists for this candidate: create another row, overwrite, or reject? Use `RETURNING` so you don't need a second query.
 
-### TODO 7: `ProfileRepository.confirm()` and `update()`
+### TODO 7: `ProfileRepository.confirm()` and `update()` ✅ Done
 **Files:** `src/repositories/profile.repository.ts`
 
 - `confirm()` writes the reviewed data and sets the status to confirmed.
@@ -90,27 +90,27 @@ Store AI-extracted data as a `draft` profile. Decide what should happen when a d
 
 ## Phase 3: Business layer and REST
 
-### TODO 8: Domain errors and HTTP error mapping
+### TODO 8: Domain errors and HTTP error mapping ✅ Done
 **Files:** `src/utils/errors.ts`, `src/middleware/error.middleware.ts`
 
 - Add error classes for the cases your service needs, at least "profile not found" and "invalid input", each with an HTTP status and error code.
 - In the middleware, handle malformed JSON bodies (Express raises its own error for those) and make sure DB errors never leak SQL or stack traces to clients.
 
-### TODO 9: `ProfileService.getProfile()`
+### TODO 9: `ProfileService.getProfile()` ✅ Done
 **Files:** `src/services/profile.service.ts`
 
 Use the repository, and throw your not-found error (TODO 8) when there's no profile. Also decide whether a **draft** profile should be returned to everyone, or only confirmed ones. Job Discovery also calls this method via gRPC.
 
 **Done when:** `GET /api/profiles/<id>` returns 200 for an existing profile and 404 otherwise.
 
-### TODO 10: Validate REST input in the controller
+### TODO 10: Validate REST input in the controller ✅ Done
 **Files:** `src/controllers/profile.controller.ts` (optionally a new helper in `src/utils/` or `src/middleware/`)
 
 The controllers currently trust `req.body` with a type cast. Add validation for each route: required fields, types, empty strings, unknown fields. Throw your validation error from TODO 8. Hand-written checks are fine. A schema library such as zod is optional.
 
 Keep **business rules** (e.g. "cannot update a draft") in the service. The controller only checks that the request is well-formed.
 
-### TODO 11: `ProfileService.updateProfile()`
+### TODO 11: `ProfileService.updateProfile()` ✅ Done
 **Files:** `src/services/profile.service.ts`
 
 Apply the candidate's changes. Think about the business rules: can a draft be updated with PUT, or only a confirmed profile? What happens with an empty update?
@@ -121,17 +121,17 @@ Apply the candidate's changes. Think about the business rules: can a draft be up
 
 ## Phase 4: Resume import (AI Model Adapter)
 
-### TODO 12: Define the AI adapter contract
+### TODO 12: Define the AI adapter contract ✅ Done
 **Files:** `src/adapters/ai/ai.types.ts`
 
 Define `ParsedResume`: what should the AI extract? Remember the AI can get things wrong or miss fields. Which fields must be optional? Keep the type free of any provider-specific shape.
 
-### TODO 13: Fake `parseResume()` for development
+### TODO 13: Fake `parseResume()` for development ✅ Done
 **Files:** `src/adapters/ai/ai.adapter.ts`
 
 Make `PlaceholderAIModelAdapter.parseResume()` return a fake but realistic `ParsedResume`, so you can build the import flow with **no** real AI call. It's up to you whether it returns fixed data or derives something simple from the input.
 
-### TODO 14: `ProfileService.importResume()`
+### TODO 14: `ProfileService.importResume()` ✅ Done
 **Files:** `src/services/profile.service.ts`
 
 Orchestrate the flow: resume text → `aiModelAdapter.parseResume()` → `profileRepository.saveDraft()` → return the draft. Consider:
@@ -141,7 +141,7 @@ Orchestrate the flow: resume text → `aiModelAdapter.parseResume()` → `profil
 
 **Done when:** `POST /api/profiles/import-resume` creates a draft and returns it.
 
-### TODO 15: `ProfileService.confirmExtractedProfile()`
+### TODO 15: `ProfileService.confirmExtractedProfile()` ✅ Done
 **Files:** `src/services/profile.service.ts`
 
 The candidate reviews the draft and sends back the corrected data. Rules to consider: a draft must exist; what if it's already confirmed? Should confirming validate that required fields are now present?
@@ -152,14 +152,14 @@ The candidate reviews the draft and sends back the corrected data. Rules to cons
 
 ## Phase 5: Internal gRPC API
 
-### TODO 16: Complete the gRPC contract
+### TODO 16: Complete the gRPC contract ✅ Done
 **Files:** `proto/candidate-profile.proto`, `src/grpc/candidate-profile.grpc.ts` (`CandidateProfileMessage`)
 
 Add the fields that **other services** need. Think about Job Discovery: what does it need for matching? Don't expose everything by default. Use `repeated` and nested messages where they fit. Once field numbers are published, never renumber or reuse them.
 
 Keep the TypeScript `CandidateProfileMessage` interface in sync.
 
-### TODO 17: Implement the gRPC `GetProfile` handler
+### TODO 17: Implement the gRPC `GetProfile` handler ✅ Done
 **Files:** `src/grpc/candidate-profile.grpc.ts`
 
 The call into `profileService.getProfile()` is already wired. You still need to:
@@ -169,14 +169,14 @@ The call into `profileService.getProfile()` is already wired. You still need to:
 
 Do **not** add any business logic or SQL here. If you need a rule, it belongs in `ProfileService`.
 
-### TODO 18: Test the gRPC API manually
+### TODO 18: Test the gRPC API manually ✅ Done
 Call `GetProfile` the way Job Discovery would: with [grpcurl](https://github.com/fullstorydev/grpcurl) (`-import-path proto -proto candidate-profile.proto -plaintext`), a GUI client such as Postman, or a small Node client script. Check a found profile, a missing profile, and an empty id.
 
 ---
 
 ## Phase 6: Quality
 
-### TODO 19: Automated tests
+### TODO 19: Automated tests ✅ Done
 **Files:** `tests/`
 
 `tests/health.test.ts` shows the pattern (Node's built-in test runner, run with `npm test`). Add:

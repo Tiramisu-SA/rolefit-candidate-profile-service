@@ -2,13 +2,13 @@
 
 Owns candidate profile data for RoleFit. It turns an uploaded resume into a profile (with help from an AI model), lets the candidate confirm and edit it, and serves it to the web frontend (REST) and to other RoleFit services (gRPC).
 
-> **Status:** scaffold only. Every business operation throws `NotImplementedError`, so the REST API returns **501** and gRPC returns **UNIMPLEMENTED**. See [TODO.md](TODO.md) for the implementation plan.
+> **Status:** implemented: REST CRUD for every profile table, resume import/confirm (placeholder AI), and gRPC `GetProfile`. Design: [docs/superpowers/specs/2026-09-27-profile-rest-crud-design.md](docs/superpowers/specs/2026-09-27-profile-rest-crud-design.md).
 
 ## Quick start
 
 ```bash
 npm install            # install dependencies
-cp .env.example .env   # then paste your Supabase connection string into DATABASE_URL
+cp .env.example .env   # or .env.local (loaded first); paste your Supabase connection string into DATABASE_URL
 npm run dev            # start REST + gRPC with auto-reload (tsx watch)
 ```
 
@@ -33,7 +33,7 @@ The database is PostgreSQL hosted on **Supabase**. This service connects with th
 
 - Use the **Session pooler** string (port 5432). It works over IPv4, including from Docker. The direct connection is IPv6-only unless you have the IPv4 add-on.
 - SSL is on by default (`DATABASE_SSL=true`). To fully verify the certificate, download Supabase's CA cert and set `DATABASE_SSL_CA_PATH`.
-- Apply the schema in `db/migrations/` with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f db/migrations/001_init.sql`.
+- Apply the schema in `db/migrations/` in order (001, 002, 003) with the Supabase **SQL Editor** or `psql "$DATABASE_URL" -f <file>`. `003_match_er_diagram.sql` is safe to re-run and brings any earlier state to the current ER diagram.
 
 The server starts even if the database is unreachable, because `pg.Pool` connects lazily.
 
@@ -70,15 +70,20 @@ Rules this design follows:
 
 ### REST API
 
-| Method | Path                           | Service operation           |
-| ------ | ------------------------------ | --------------------------- |
-| GET    | `/health`                      | none (health check)         |
-| POST   | `/api/profiles/import-resume`  | `importResume()`            |
-| POST   | `/api/profiles/confirm`        | `confirmExtractedProfile()` |
-| PUT    | `/api/profiles/:candidateId`   | `updateProfile()`           |
-| GET    | `/api/profiles/:candidateId`   | `getProfile()`              |
+Every `/api/profiles` route needs an `X-User-Id: <uuid>` header (mock identity until real auth; 401 otherwise) and works on the caller's own profile. CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`).
 
-Errors are returned as `{ "error": { "code": "...", "message": "..." } }`.
+| Method | Path | Result |
+| ------ | ---- | ------ |
+| GET | `/health` | health check |
+| POST | `/api/profiles/me` | create profile (201, 409 if it exists) |
+| GET / PATCH / DELETE | `/api/profiles/me` | read (with all sections) / update basics / delete everything |
+| GET / POST | `/api/profiles/me/{skills,experience,education,projects}` | list / add a row |
+| PUT / DELETE | `/api/profiles/me/{skills,experience,education,projects}/:id` | replace / delete one row |
+| GET / PUT / DELETE | `/api/profiles/me/preferences` | read / create-or-update / delete |
+| POST | `/api/profiles/me/import-resume` | raw PDF/DOC/DOCX body (≤ 5 MB), `X-File-Name` header → extracted profile, not saved |
+| POST | `/api/profiles/me/confirm` | save a whole reviewed profile, `verified = true` |
+
+Errors are returned as `{ "error": { "code": "...", "message": "...", "details"?: [{ "field", "message" }] } }`. Codes and body shapes are listed in the design spec.
 
 ### gRPC API
 
