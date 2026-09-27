@@ -6,14 +6,14 @@
  */
 
 export interface ParseResumeInput {
-  resumeText: string;
+  fileName: string;
+  contentType: string;
+  content: Buffer;
 }
 
 /**
- * Structured data extracted from a resume.
- * TODO 12: Define the fields you expect the AI to extract. They will usually
- * map onto (a subset of) your CandidateProfile fields.
+ * Structured data extracted from a resume, in the same shape as a confirm
+ * request body. ProfileService validates it before returning it, so an
+ * adapter may return loosely-typed data.
  */
-export interface ParsedResume {
-  // TODO 12
-}
+export type ParsedResume = unknown;

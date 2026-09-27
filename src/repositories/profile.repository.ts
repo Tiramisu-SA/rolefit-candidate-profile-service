@@ -1,48 +1,52 @@
-import type { Pool } from 'pg';
-import { NotImplementedError } from '../utils/errors';
 import type {
   CandidateProfile,
-  ConfirmProfileInput,
-  UpdateProfileInput,
+  ChildDataMap,
+  ChildKind,
+  ChildRow,
+  Preferences,
+  PreferencesData,
+  ProfileBasics,
+  ProfileDocument,
 } from '../types/profile.types';
-import type { ParsedResume } from '../adapters/ai/ai.types';
 
 /**
  * Data access for candidate profiles.
  *
  * This is the ONLY place in the whole RoleFit system that talks to the
- * candidate profile database. The service layer depends on the interface,
- * which also lets you swap in an in-memory fake for tests.
+ * candidate profile database. The service layer depends on this interface,
+ * which also lets tests swap in an in-memory fake.
+ *
+ * Child methods always take the owning profile id, so a row can only be
+ * read or changed through its own profile.
  */
 export interface ProfileRepository {
-  findByCandidateId(candidateId: string): Promise<CandidateProfile | null>;
-  saveDraft(candidateId: string, parsed: ParsedResume): Promise<CandidateProfile>;
-  confirm(input: ConfirmProfileInput): Promise<CandidateProfile>;
-  update(candidateId: string, changes: UpdateProfileInput): Promise<CandidateProfile>;
-}
+  /** Runs fn inside one transaction; fn gets a repository bound to it. */
+  transaction<T>(fn: (repo: ProfileRepository) => Promise<T>): Promise<T>;
 
-export class PostgresProfileRepository implements ProfileRepository {
-  constructor(private readonly pool: Pool) {}
+  findByUserId(userId: string): Promise<CandidateProfile | null>;
+  findById(id: string): Promise<CandidateProfile | null>;
+  /** Returns the new profile id. */
+  create(userId: string, basics: ProfileBasics): Promise<string>;
+  updateBasics(profileId: string, changes: Partial<ProfileBasics>): Promise<void>;
+  deleteById(profileId: string): Promise<void>;
+  /** Sets updated_at = now() on the profile row. */
+  touch(profileId: string): Promise<void>;
+  setExperienceMonths(profileId: string, months: number): Promise<void>;
 
-  async findByCandidateId(candidateId: string): Promise<CandidateProfile | null> {
-    // TODO 5: Query the profile by candidate id and map the row to a
-    // CandidateProfile. Return null when no row exists.
-    throw new NotImplementedError('ProfileRepository.findByCandidateId');
-  }
+  listChildren<K extends ChildKind>(kind: K, profileId: string): Promise<ChildRow<K>[]>;
+  /** Throws ConflictError('DUPLICATE_SKILL') for a skill name that exists (ignoring case). */
+  insertChild<K extends ChildKind>(kind: K, profileId: string, data: ChildDataMap[K]): Promise<ChildRow<K>>;
+  /** Returns null when the row does not exist or belongs to another profile. */
+  updateChild<K extends ChildKind>(kind: K, profileId: string, id: string, data: ChildDataMap[K]): Promise<ChildRow<K> | null>;
+  deleteChild(kind: ChildKind, profileId: string, id: string): Promise<boolean>;
 
-  async saveDraft(candidateId: string, parsed: ParsedResume): Promise<CandidateProfile> {
-    // TODO 6: Persist the AI-extracted data as a draft profile.
-    // Think about what happens if the candidate imports a second resume.
-    throw new NotImplementedError('ProfileRepository.saveDraft');
-  }
+  getPreferences(profileId: string): Promise<Preferences | null>;
+  upsertPreferences(profileId: string, data: PreferencesData): Promise<Preferences>;
+  deletePreferences(profileId: string): Promise<boolean>;
 
-  async confirm(input: ConfirmProfileInput): Promise<CandidateProfile> {
-    // TODO 7: Store the candidate-reviewed data and mark the profile confirmed.
-    throw new NotImplementedError('ProfileRepository.confirm');
-  }
-
-  async update(candidateId: string, changes: UpdateProfileInput): Promise<CandidateProfile> {
-    // TODO 7: Update only the provided fields and bump updatedAt.
-    throw new NotImplementedError('ProfileRepository.update');
-  }
+  /**
+   * Creates or fully replaces the user's profile (basics and every child row),
+   * sets verified = true and the given experience months. Returns the profile id.
+   */
+  replaceDocument(userId: string, doc: ProfileDocument, experienceMonths: number): Promise<string>;
 }
