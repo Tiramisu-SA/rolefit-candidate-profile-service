@@ -18,6 +18,10 @@ export interface EnvConfig {
   databaseSslCaPath: string;
   /** Web frontend origin allowed by CORS. */
   corsOrigin: string;
+  /** Supabase Auth project URL used to verify access tokens. */
+  supabaseUrl: string;
+  /** Supabase publishable key used for Auth verification; never a service role key. */
+  supabasePublishableKey: string;
 }
 
 /** Every problem found while reading the environment, reported together. */
@@ -58,6 +62,8 @@ function loadEnv(): EnvConfig {
     databaseSsl: readBoolean('DATABASE_SSL', true),
     databaseSslCaPath: process.env.DATABASE_SSL_CA_PATH?.trim() ?? '',
     corsOrigin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:3000',
+    supabaseUrl: process.env.SUPABASE_URL?.trim() ?? '',
+    supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ?? '',
   };
 
   if (config.databaseUrl && !/^postgres(ql)?:\/\//.test(config.databaseUrl)) {

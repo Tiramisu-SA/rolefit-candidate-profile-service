@@ -44,7 +44,7 @@ export class EmptyFileError extends AppError {
 }
 
 export class UnauthenticatedError extends AppError {
-  constructor(message = 'Missing or invalid X-User-Id header') {
+  constructor(message = 'Missing or invalid bearer token') {
     super(message, 401, 'UNAUTHENTICATED');
   }
 }
