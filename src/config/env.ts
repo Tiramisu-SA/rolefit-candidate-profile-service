@@ -22,6 +22,11 @@ export interface EnvConfig {
   supabaseUrl: string;
   /** Supabase publishable key used for Auth verification; never a service role key. */
   supabasePublishableKey: string;
+  /**
+   * 'jwt' (default): verify Supabase tokens. 'mock': trust the X-User-Id header,
+   * for local testing while the frontend still sends mock ids. Not allowed in production.
+   */
+  authMode: 'jwt' | 'mock';
 }
 
 /** Every problem found while reading the environment, reported together. */
@@ -64,7 +69,16 @@ function loadEnv(): EnvConfig {
     corsOrigin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:3000',
     supabaseUrl: process.env.SUPABASE_URL?.trim() ?? '',
     supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ?? '',
+    authMode: process.env.AUTH_MODE?.trim() === 'mock' ? 'mock' : 'jwt',
   };
+
+  const rawAuthMode = process.env.AUTH_MODE?.trim();
+  if (rawAuthMode && rawAuthMode !== 'jwt' && rawAuthMode !== 'mock') {
+    errors.push(`AUTH_MODE must be "jwt" or "mock" (got "${rawAuthMode}")`);
+  }
+  if (config.authMode === 'mock' && config.nodeEnv === 'production') {
+    errors.push('AUTH_MODE=mock is not allowed when NODE_ENV=production');
+  }
 
   if (config.databaseUrl && !/^postgres(ql)?:\/\//.test(config.databaseUrl)) {
     errors.push('DATABASE_URL must start with postgres:// or postgresql://');

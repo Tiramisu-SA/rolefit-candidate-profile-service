@@ -10,7 +10,7 @@ export function cors(allowedOrigin: string) {
     res.setHeader('Vary', 'Origin');
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-User-Id');
       res.setHeader('Access-Control-Max-Age', '600');
       res.status(204).end();
       return;

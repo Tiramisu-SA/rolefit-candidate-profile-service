@@ -14,7 +14,12 @@ import { logger } from './utils/logger';
  * REST and gRPC receive the SAME ProfileService instance.
  */
 async function main(): Promise<void> {
-  const verifyClaims = createClaimsVerifier(env.supabaseUrl, env.supabasePublishableKey);
+  // AUTH_MODE=mock skips token verification and trusts X-User-Id (local testing only).
+  const verifyClaims =
+    env.authMode === 'jwt' ? createClaimsVerifier(env.supabaseUrl, env.supabasePublishableKey) : undefined;
+  if (!verifyClaims) {
+    logger.warn('AUTH_MODE=mock: trusting the X-User-Id header. Do not use this outside local development.');
+  }
 
   // Infrastructure
   const pool = createDatabasePool();
