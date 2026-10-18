@@ -3,15 +3,14 @@ import type { ClaimsVerifier } from './auth/supabase';
 import type { ProfileController } from './controllers/profile.controller';
 import { createProfileRouter } from './routes/profile.routes';
 import { cors } from './middleware/cors.middleware';
-import { identify, identifyFromHeader } from './middleware/identity.middleware';
+import { identify } from './middleware/identity.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
 export interface AppDependencies {
   profileController: ProfileController;
   /** The web frontend origin allowed by CORS, e.g. http://localhost:3000. */
   corsOrigin: string;
-  /** Verifies Supabase tokens. Leave it out only for AUTH_MODE=mock (X-User-Id header). */
-  verifyClaims?: ClaimsVerifier;
+  verifyClaims: ClaimsVerifier;
 }
 
 /**
@@ -25,7 +24,7 @@ export function createApp({ profileController, corsOrigin, verifyClaims }: AppDe
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'candidate-profile-service' });
   });
-  app.use('/api/profiles', verifyClaims ? identify(verifyClaims) : identifyFromHeader);
+  app.use('/api/profiles', identify(verifyClaims));
   // A confirmed profile with many bullets can exceed the 100 kb default.
   app.use(express.json({ limit: '1mb' }));
   app.use('/api/profiles', createProfileRouter(profileController));
