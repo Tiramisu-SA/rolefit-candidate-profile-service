@@ -236,3 +236,49 @@ test('unknown routes return 404 ROUTE_NOT_FOUND', async () => {
     assert.equal(await errorCode(res), 'ROUTE_NOT_FOUND');
   });
 });
+
+// --- AUTH_MODE=mock: no verifier, the X-User-Id header identifies the caller (local testing only) ---
+
+async function withMockApi(fn: (base: string) => Promise<void>) {
+  const service = new ProfileService(new InMemoryProfileRepository(), fakeAiAdapter);
+  const app = createApp({ profileController: new ProfileController(service), corsOrigin: ORIGIN });
+  const server = app.listen(0);
+  await new Promise((r) => server.once('listening', r));
+  try {
+    await fn(`http://127.0.0.1:${(server.address() as AddressInfo).port}`);
+  } finally {
+    server.close();
+  }
+}
+
+test('mock auth mode: X-User-Id identifies the caller', async () => {
+  await withMockApi(async (base) => {
+    const created = await fetch(`${base}/api/profiles/me`, {
+      method: 'POST',
+      headers: { 'X-User-Id': USER, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Mock' }),
+    });
+    assert.equal(created.status, 201);
+    assert.equal(((await created.json()) as { id: string }).id, USER);
+    const res = await fetch(`${base}/api/profiles/me`, { headers: { 'X-User-Id': USER } });
+    assert.equal(res.status, 200);
+  });
+});
+
+test('mock auth mode: a missing or non-UUID X-User-Id is 401', async () => {
+  await withMockApi(async (base) => {
+    assert.equal((await fetch(`${base}/api/profiles/me`)).status, 401);
+    assert.equal((await fetch(`${base}/api/profiles/me`, { headers: { 'X-User-Id': 'nope' } })).status, 401);
+  });
+});
+
+test('CORS preflight allows the X-User-Id header', async () => {
+  await withMockApi(async (base) => {
+    const res = await fetch(`${base}/api/profiles/me`, {
+      method: 'OPTIONS',
+      headers: { Origin: ORIGIN, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'x-user-id' },
+    });
+    assert.equal(res.status, 204);
+    assert.match((res.headers.get('access-control-allow-headers') ?? '').toLowerCase(), /x-user-id/);
+  });
+});

@@ -74,6 +74,8 @@ Rules this design follows:
 
 Every `/api/profiles` route needs `Authorization: Bearer <access-token>`. Supabase verifies the token and the service takes the profile owner id from its signed `sub` claim; caller-supplied identity headers are ignored. A profile's `id` is its owner's user id (there is no `user_id` column). CORS allows the origin in `CORS_ORIGIN` (default `http://localhost:3000`) and permits the `Authorization` header.
 
+**Local testing only:** set `AUTH_MODE=mock` to skip token verification and trust an `X-User-Id: <uuid>` header instead (for the frontend's mock identity). The service logs a warning and refuses to start with `AUTH_MODE=mock` when `NODE_ENV=production`. Leave `AUTH_MODE` unset (or `jwt`) for normal use.
+
 | Method | Path | Result |
 | ------ | ---- | ------ |
 | GET | `/health` | health check |
