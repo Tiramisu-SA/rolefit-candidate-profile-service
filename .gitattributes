@@ -1,0 +1,4 @@
+# Test fixtures are byte-exact documents; never convert their line endings.
+*.pdf binary
+*.docx binary
+*.doc binary
