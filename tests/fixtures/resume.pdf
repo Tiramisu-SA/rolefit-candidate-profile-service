@@ -1,0 +1,60 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 778 >>
+stream
+BT
+/F1 11 Tf
+14 TL
+72 760 Td
+(Somchai Jaidee) Tj T*
+(Backend Developer) Tj T*
+(somchai.jaidee@example.com | Chiang Mai, Thailand) Tj T*
+(https://github.com/somchaij | https://linkedin.com/in/somchai-jaidee) Tj T*
+() Tj T*
+(Summary) Tj T*
+(Backend developer who builds Node.js and PostgreSQL services.) Tj T*
+() Tj T*
+(Skills) Tj T*
+(TypeScript, Node.js, PostgreSQL, Docker) Tj T*
+() Tj T*
+(Experience) Tj T*
+(Software Engineer Intern, Lanna Tech) Tj T*
+(Jun 2025 - Dec 2025) Tj T*
+(- Built REST endpoints for an inventory system) Tj T*
+(- Wrote integration tests with Jest) Tj T*
+() Tj T*
+(Education) Tj T*
+(Chiang Mai University) Tj T*
+(B.Eng. Computer Engineering, GPA 3.51, 2026) Tj T*
+() Tj T*
+(Projects) Tj T*
+(Campus Market) Tj T*
+(- Marketplace app for students) Tj T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1140
+%%EOF

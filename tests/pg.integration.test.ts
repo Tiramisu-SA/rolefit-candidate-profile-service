@@ -5,7 +5,7 @@ import { Pool } from 'pg';
 import '../src/config/database'; // registers the DATE type parser
 import { PostgresProfileRepository } from '../src/repositories/postgres-profile.repository';
 import { ProfileService } from '../src/services/profile.service';
-import { PlaceholderAIModelAdapter } from '../src/adapters/ai/ai.adapter';
+import { fakeAiAdapter } from './fakes/fake-ai.adapter';
 import { AppError } from '../src/utils/errors';
 
 // Runs only against a real database that has migrations 001-003 applied:
@@ -19,7 +19,7 @@ test('Postgres repository: profile and child CRUD round trip', { skip: !url && '
     ssl: process.env.TEST_DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
     max: 2,
   });
-  const service = new ProfileService(new PostgresProfileRepository(pool), new PlaceholderAIModelAdapter());
+  const service = new ProfileService(new PostgresProfileRepository(pool), fakeAiAdapter);
   const user = randomUUID();
   try {
     await service.createProfile(user, { name: 'Integration Test', links: ['https://example.com'] });

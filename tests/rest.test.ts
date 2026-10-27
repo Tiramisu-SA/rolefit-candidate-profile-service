@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app';
+import type { AIModelAdapter } from '../src/adapters/ai/ai.adapter';
+import { BasicResumeAdapter } from '../src/adapters/ai/basic-resume.adapter';
 import { ProfileController } from '../src/controllers/profile.controller';
 import { ProfileService } from '../src/services/profile.service';
 import { InMemoryProfileRepository } from './fakes/in-memory-profile.repository';
@@ -19,8 +23,11 @@ interface CallOptions {
   authorization?: string | null;
 }
 
-async function withApi(fn: (call: (method: string, path: string, opts?: CallOptions) => Promise<Response>) => Promise<void>) {
-  const service = new ProfileService(new InMemoryProfileRepository(), fakeAiAdapter);
+async function withApi(
+  fn: (call: (method: string, path: string, opts?: CallOptions) => Promise<Response>) => Promise<void>,
+  aiModelAdapter: AIModelAdapter = fakeAiAdapter,
+) {
+  const service = new ProfileService(new InMemoryProfileRepository(), aiModelAdapter);
   const app = createApp({
     profileController: new ProfileController(service),
     corsOrigin: ORIGIN,
@@ -215,6 +222,26 @@ test('import-resume: 415 for other types, 413 over 5 MB, 200 with the file name'
     assert.equal(json.fileName, 'ประวัติ.pdf');
     assert.equal(json.profile.name, 'Parsed Person');
   });
+});
+
+test('import-resume with the basic parser: a real PDF is read, a scan without text is 422', async () => {
+  const fixture = (name: string) => fs.readFileSync(path.join(__dirname, 'fixtures', name));
+  await withApi(async (call) => {
+    let res = await call('POST', '/api/profiles/me/import-resume', {
+      raw: fixture('resume.pdf'),
+      headers: { 'Content-Type': 'application/pdf', 'X-File-Name': 'somchai.pdf' },
+    });
+    assert.equal(res.status, 200);
+    const { profile } = (await res.json()) as { profile: { name: string; email: string; skills: { name: string }[]; experience: { companyName: string }[] } };
+    assert.equal(profile.name, 'Somchai Jaidee');
+    assert.equal(profile.email, 'somchai.jaidee@example.com');
+    assert.deepEqual(profile.skills.map((s) => s.name), ['TypeScript', 'Node.js', 'PostgreSQL', 'Docker']);
+    assert.deepEqual(profile.experience.map((e) => e.companyName), ['Lanna Tech']);
+
+    res = await call('POST', '/api/profiles/me/import-resume', { raw: fixture('blank.pdf'), headers: { 'Content-Type': 'application/pdf' } });
+    assert.equal(res.status, 422);
+    assert.equal(await errorCode(res), 'RESUME_UNREADABLE');
+  }, new BasicResumeAdapter());
 });
 
 test('confirm saves the whole document as a verified profile', async () => {

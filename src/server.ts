@@ -2,7 +2,12 @@ import { env } from './config/env';
 import { createClaimsVerifier } from './auth/supabase';
 import { checkDatabaseConnection, createDatabasePool } from './config/database';
 import { PostgresProfileRepository } from './repositories/postgres-profile.repository';
-import { PlaceholderAIModelAdapter } from './adapters/ai/ai.adapter';
+import type { AIModelAdapter } from './adapters/ai/ai.adapter';
+import { BasicResumeAdapter } from './adapters/ai/basic-resume.adapter';
+import { FallbackResumeAdapter } from './adapters/ai/fallback-resume.adapter';
+import { LlmResumeAdapter } from './adapters/ai/llm-resume.adapter';
+import { ClaudeClient } from './adapters/ai/clients/claude.client';
+import { OpenAiCompatibleClient } from './adapters/ai/clients/openai-compatible.client';
 import { ProfileService } from './services/profile.service';
 import { ProfileController } from './controllers/profile.controller';
 import { createApp } from './app';
@@ -24,7 +29,7 @@ async function main(): Promise<void> {
   await checkDatabaseConnection(pool);
 
   const profileRepository = new PostgresProfileRepository(pool);
-  const aiModelAdapter = new PlaceholderAIModelAdapter();
+  const aiModelAdapter = createAiModelAdapter();
 
   // Business layer (shared)
   const profileService = new ProfileService(profileRepository, aiModelAdapter);
@@ -53,6 +58,22 @@ async function main(): Promise<void> {
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
+}
+
+/**
+ * AI_PROVIDER picks the resume parser. With a provider, the language model
+ * goes first and the basic library parser takes over if it fails; without
+ * one, the basic parser handles every upload.
+ */
+function createAiModelAdapter(): AIModelAdapter {
+  const basic = new BasicResumeAdapter();
+  if (!env.ai) {
+    logger.info('Resume parsing: basic parser only (set AI_PROVIDER to use an AI model)');
+    return basic;
+  }
+  const llm = env.ai.provider === 'claude' ? new ClaudeClient(env.ai) : new OpenAiCompatibleClient(env.ai);
+  logger.info(`Resume parsing: ${llm.label}, with the basic parser as fallback`);
+  return new FallbackResumeAdapter(new LlmResumeAdapter(llm), basic, llm.label);
 }
 
 main().catch((err) => {

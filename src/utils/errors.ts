@@ -75,4 +75,15 @@ export class UnsupportedFileTypeError extends AppError {
   }
 }
 
-export const profileNotFound = () => new NotFoundError('PROFILE_NOT_FOUND', 'Profile not found');
+/** The file opened but no text came out (damaged, or a scanned image). */
+export class UnreadableResumeError extends AppError {
+  constructor() {
+    super(
+      "We couldn't read any text from this file. If it is a scan, upload a text-based PDF or Word document.",
+      422,
+      'RESUME_UNREADABLE',
+    );
+  }
+}
+
+export const profileNotFound =() => new NotFoundError('PROFILE_NOT_FOUND', 'Profile not found');
