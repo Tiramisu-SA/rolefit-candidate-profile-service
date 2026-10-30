@@ -184,7 +184,10 @@ Call `GetProfile` the way Job Discovery would: with [grpcurl](https://github.com
 - **REST tests** for status codes (200/201/400/404).
 - *(Optional)* A gRPC test that starts the server on port 0 and calls it with a client.
 
-### TODO 20 (later / optional): Real AI provider adapter
+### TODO 20 (later / optional): Real AI provider adapter ✅ Done
+
+> `LlmResumeAdapter` calls the provider chosen with `AI_PROVIDER` (Gemini, Groq, OpenRouter, Ollama, Claude or any OpenAI-style server); `BasicResumeAdapter` parses with libraries only and takes over when the AI call fails or no provider is set. The placeholder is gone. See "Resume parsing" in the README.
+
 **Files:** new class in `src/adapters/ai/`, `src/config/env.ts`, `src/server.ts`
 
 Create a second `AIModelAdapter` implementation that calls a real LLM provider. Keep the API key in env config, add timeouts, and validate the model's output before returning a `ParsedResume`. Switch implementations in `server.ts` only. `ProfileService` should not need any change, which shows the adapter design is working.

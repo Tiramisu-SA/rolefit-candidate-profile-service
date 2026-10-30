@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import dotenv from 'dotenv';
+import { readAiConfig, type AiConfig } from './ai-config';
 
 // .env.local wins over .env (dotenv never overrides a variable that is already set).
 dotenv.config({ path: ['.env.local', '.env'], quiet: true });
@@ -22,6 +23,8 @@ export interface EnvConfig {
   supabaseUrl: string;
   /** Supabase publishable key used for Auth verification; never a service role key. */
   supabasePublishableKey: string;
+  /** AI provider for resume parsing; null means the basic library parser only. */
+  ai: AiConfig | null;
 }
 
 /** Every problem found while reading the environment, reported together. */
@@ -54,6 +57,9 @@ function readBoolean(name: string, defaultValue: boolean): boolean {
 }
 
 function loadEnv(): EnvConfig {
+  const ai = readAiConfig(process.env);
+  errors.push(...ai.errors);
+
   const config: EnvConfig = {
     nodeEnv: process.env.NODE_ENV || 'development',
     restPort: readPort('REST_PORT', 3001),
@@ -64,6 +70,7 @@ function loadEnv(): EnvConfig {
     corsOrigin: process.env.CORS_ORIGIN?.trim() || 'http://localhost:3000',
     supabaseUrl: process.env.SUPABASE_URL?.trim() ?? '',
     supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ?? '',
+    ai: ai.config,
   };
 
   if (config.databaseUrl && !/^postgres(ql)?:\/\//.test(config.databaseUrl)) {
