@@ -4,6 +4,7 @@ import type { ProfileController } from './controllers/profile.controller';
 import { createProfileRouter } from './routes/profile.routes';
 import { cors } from './middleware/cors.middleware';
 import { identify } from './middleware/identity.middleware';
+import { requestContext } from './middleware/request-context.middleware';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
 export interface AppDependencies {
@@ -24,6 +25,8 @@ export function createApp({ profileController, corsOrigin, verifyClaims }: AppDe
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'candidate-profile-service' });
   });
+  // After /health, so the health checks polling every few seconds are not logged.
+  app.use(requestContext);
   app.use('/api/profiles', identify(verifyClaims));
   // A confirmed profile with many bullets can exceed the 100 kb default.
   app.use(express.json({ limit: '1mb' }));
