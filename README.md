@@ -128,6 +128,10 @@ service CandidateProfileService {
 
 The proto is loaded at runtime with `@grpc/proto-loader` (`keepCase: true`, so fields stay snake_case). Other services should use a copy of this `.proto` file as their contract.
 
+## Logs and request id
+
+Logs are JSON, one object per line. Each REST request or gRPC call logs one line when it ends, with `requestId`, its status and `durationMs` (`/health` is skipped). The id comes from the `X-Request-Id` header or `x-request-id` gRPC metadata, or is generated if missing or unsafe. It is not sent to AI providers.
+
 ## Project structure: where to implement each part
 
 | File | Role | TODOs |

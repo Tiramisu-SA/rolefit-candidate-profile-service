@@ -3,6 +3,7 @@ import type { ProfileService } from '../services/profile.service';
 import type { CandidateProfile } from '../types/profile.types';
 import { AppError, ValidationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { withRequestContext } from './with-request-context';
 
 /*
  * gRPC adapter: translates gRPC <-> ProfileService calls.
@@ -124,5 +125,5 @@ export function createCandidateProfileHandlers(profileService: ProfileService): 
     }
   };
 
-  return { GetProfile };
+  return { GetProfile: withRequestContext('GetProfile', GetProfile) };
 }
