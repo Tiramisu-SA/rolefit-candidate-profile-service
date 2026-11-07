@@ -46,6 +46,7 @@ export interface CandidateProfileMessage {
   };
   verified: boolean;
   updated_at: string;
+  email: string;
 }
 
 export interface GetProfileResponse {
@@ -89,6 +90,7 @@ export function toProtoProfile(p: CandidateProfile): CandidateProfileMessage {
       : undefined,
     verified: p.verified,
     updated_at: p.updatedAt.toISOString(),
+    email: p.email ?? '',
   };
 }
 

@@ -40,6 +40,7 @@ test('GetProfile maps the profile to the proto message', async () => {
   await withGrpc(async (getProfile, service) => {
     const p = await service.confirmProfile(USER, {
       name: 'Pim',
+      email: 'pim@example.test',
       location: 'Bangkok',
       skills: [{ name: 'React', proficiencyLevel: 'ADVANCED' }],
       experience: [{ companyName: 'A', jobTitle: 'Dev', startDate: '2024-01-01', endDate: '2024-12-31' }],
@@ -52,6 +53,7 @@ test('GetProfile maps the profile to the proto message', async () => {
     assert.equal(profile.candidate_id, USER);
     assert.equal('user_id' in profile, false);
     assert.equal(profile.name, 'Pim');
+    assert.equal(profile.email, 'pim@example.test');
     assert.equal(profile.total_experience_months, 12);
     assert.equal(profile.verified, true);
     assert.deepEqual(profile.skills, [{ name: 'React', proficiency_level: 'ADVANCED' }]);
